@@ -19,15 +19,16 @@
 
 ## 📋 Sobre o Projeto
 
-O **Astra Campaign** é uma **plataforma SaaS multi-tenant** completa e open-source para gerenciamento e execução de campanhas de WhatsApp em massa. Desenvolvido com arquitetura moderna, oferece recursos enterprise como isolamento total de dados por empresa, sistema de quotas, backup/restore automatizado, inteligência artificial para personalização de mensagens e suporte a múltiplos provedores WhatsApp (WAHA e Evolution API).
+O **Astra Campaign** é uma **plataforma SaaS multi-tenant** completa e open-source para gerenciamento e execução de campanhas de WhatsApp em massa. Desenvolvido com arquitetura moderna, oferece recursos enterprise como isolamento total de dados por empresa, sistema de quotas, backup/restore automatizado, inteligência artificial para personalização de mensagens e suporte a múltiplos provedores WhatsApp (WAHA, Evolution API e QuePasa), além de integração com Chatwoot para importação de contatos.
 
 > 🔥 **Open Source & SaaS Ready**: Projeto totalmente gratuito com arquitetura multi-tenant pronta para comercialização. Sem ligação alguma com o WhatsApp oficial.
 
 ### ✨ Principais Diferenciais
 
 - 🏢 **Multi-Tenant (SaaS)**: Isolamento completo de dados por empresa
-- 🔌 **Dual Provider**: Integração com WAHA API e Evolution API
+- 🔌 **Múltiplos Provedores**: Integração com WAHA API, Evolution API e QuePasa
 - 🤖 **IA Integrada**: OpenAI e Groq para mensagens personalizadas
+- 💬 **Integração Chatwoot**: Importação de contatos do Chatwoot
 - 🎲 **Randomização Inteligente**: Textos, imagens, vídeos e arquivos aleatórios
 - 🔄 **Multi-Sessão com Failover**: Distribuição inteligente de envios
 - 💾 **Backup & Restore**: Sistema automatizado de backup e restauração
@@ -61,15 +62,18 @@ O **Astra Campaign** é uma **plataforma SaaS multi-tenant** completa e open-sou
 ### 👥 **Gerenciamento de Contatos**
 - ✅ CRUD completo de contatos
 - ✅ Importação em massa via CSV
+- ✅ **Importação do Chatwoot**: Sincronização de contatos do Chatwoot
 - ✅ Sistema de categorização com tags
 - ✅ Validação de números telefônicos (formato E.164)
 - ✅ Busca avançada e filtros inteligentes
 - ✅ Paginação otimizada
 - ✅ Isolamento por tenant
+- ✅ Edição em massa de contatos
 
-### 📱 **Conexões WhatsApp (Dual Provider)**
+### 📱 **Conexões WhatsApp (Múltiplos Provedores)**
 - ✅ **WAHA API**: Suporte completo com QR Code
 - ✅ **Evolution API**: Integração nativa com Evolution
+- ✅ **QuePasa**: Integração com API QuePasa
 - ✅ Múltiplas sessões simultâneas por tenant
 - ✅ QR Code automático com expiração
 - ✅ Status em tempo real das conexões
@@ -171,6 +175,8 @@ O **Astra Campaign** é uma **plataforma SaaS multi-tenant** completa e open-sou
 ### 🔌 **Integrações**
 - **WAHA API** - WhatsApp Web API
 - **Evolution API** - API alternativa para WhatsApp
+- **QuePasa** - API WhatsApp multi-dispositivo
+- **Chatwoot** - Importação de contatos e sincronização
 - **OpenAI API** - GPT para geração de conteúdo
 - **Groq API** - IA ultra-rápida
 
@@ -207,6 +213,10 @@ environment:
   - DEFAULT_WAHA_API_KEY=sua-waha-api-key
   - DEFAULT_EVOLUTION_HOST=https://seu-evolution.com
   - DEFAULT_EVOLUTION_API_KEY=sua-evolution-api-key
+  - DEFAULT_QUEPASA_HOST=https://seu-quepasa.com
+  - DEFAULT_QUEPASA_TOKEN=seu-quepasa-token
+  - DEFAULT_CHATWOOT_URL=https://seu-chatwoot.com
+  - DEFAULT_CHATWOOT_TOKEN=seu-chatwoot-token
   - DEFAULT_COMPANY_NAME=Sua Empresa
   - DEFAULT_PAGE_TITLE=Seu Sistema
 ```
@@ -248,11 +258,12 @@ npm run dev          # Servidor de desenvolvimento (porta 3000)
 1. **Acesse o sistema**: `http://localhost` ou seu domínio
 2. **Login padrão SUPERADMIN**: `superadmin@astraonline.com.br` / `Admin123`
 3. **Login padrão ADMIN**: `admin@astraonline.com.br` / `Admin123`
-4. **Configure provedores**: Vá em Configurações e adicione WAHA/Evolution
-5. **Crie empresas**: Como SUPERADMIN, crie novos tenants
-6. **Crie uma sessão WhatsApp**: Na página de Conexões
-7. **Importe contatos**: Via CSV ou manualmente
-8. **Crie sua primeira campanha**: Na página de Campanhas
+4. **Configure provedores**: Vá em Configurações e adicione WAHA/Evolution/QuePasa
+5. **Configure Chatwoot** (opcional): Adicione URL e token do Chatwoot em Configurações
+6. **Crie empresas**: Como SUPERADMIN, crie novos tenants
+7. **Crie uma sessão WhatsApp**: Na página de Conexões (escolha o provedor)
+8. **Importe contatos**: Via CSV, Chatwoot ou manualmente
+9. **Crie sua primeira campanha**: Na página de Campanhas
 
 ---
 
@@ -277,6 +288,8 @@ npm run dev          # Servidor de desenvolvimento (porta 3000)
 - `PUT /api/contatos/:id` - Atualizar contato
 - `DELETE /api/contatos/:id` - Excluir contato
 - `POST /api/contatos/import` - Importar CSV
+- `POST /api/chatwoot/sync-contacts` - Importar contatos do Chatwoot
+- `PATCH /api/contatos/bulk-edit` - Edição em massa de contatos
 
 #### **Campanhas**
 - `GET /api/campaigns` - Listar campanhas
@@ -287,7 +300,7 @@ npm run dev          # Servidor de desenvolvimento (porta 3000)
 
 #### **Sessões WhatsApp**
 - `GET /api/waha/sessions` - Listar sessões
-- `POST /api/waha/sessions` - Criar sessão (WAHA ou Evolution)
+- `POST /api/waha/sessions` - Criar sessão (WAHA, Evolution ou QuePasa)
 - `DELETE /api/waha/sessions/:name` - Remover sessão
 - `POST /api/waha/sessions/:name/restart` - Reiniciar
 
@@ -355,8 +368,9 @@ interface WhatsAppSession {
   name: string;
   displayName?: string;
   status: string;
-  provider: 'WAHA' | 'EVOLUTION';
+  provider: 'WAHA' | 'EVOLUTION' | 'QUEPASA';
   qr?: string;
+  quepasaToken?: string; // Token para QuePasa
 }
 ```
 
@@ -370,10 +384,20 @@ DATABASE_URL=postgresql://user:pass@host:5432/db
 REDIS_URL=redis://redis:6379
 JWT_SECRET=sua-chave-secreta-muito-segura
 JWT_EXPIRES_IN=24h
+
+# Provedores WhatsApp
 DEFAULT_WAHA_HOST=http://waha:3000
 DEFAULT_WAHA_API_KEY=sua-waha-api-key
 DEFAULT_EVOLUTION_HOST=http://evolution:8080
 DEFAULT_EVOLUTION_API_KEY=sua-evolution-api-key
+DEFAULT_QUEPASA_HOST=http://quepasa:31000
+DEFAULT_QUEPASA_TOKEN=seu-quepasa-token
+
+# Integração Chatwoot
+DEFAULT_CHATWOOT_URL=https://seu-chatwoot.com
+DEFAULT_CHATWOOT_TOKEN=seu-chatwoot-token
+
+# Configurações Gerais
 DEFAULT_COMPANY_NAME=Astra Campaign
 DEFAULT_PAGE_TITLE=Sistema de Gestão de Contatos
 ```
@@ -396,6 +420,47 @@ nome,telefone,email,categoria,observacoes
 João Silva,+5511999999999,joao@email.com,Cliente VIP,Cliente preferencial
 Maria Santos,+5511888888888,maria@email.com,Prospect,Interessada em produto X
 ```
+
+### 💬 **Integração com Chatwoot**
+
+Para importar contatos do Chatwoot:
+
+1. **Configure o Chatwoot** nas configurações do tenant:
+   - URL do Chatwoot: `https://seu-chatwoot.com`
+   - Token de API: Obtenha em Perfil → Tokens de Acesso
+
+2. **Importe os contatos**:
+   - Acesse a página de Contatos
+   - Clique em "Importar do Chatwoot"
+   - Selecione a categoria desejada
+   - Os contatos serão sincronizados automaticamente
+
+3. **Dados importados**:
+   - Nome do contato
+   - Número de telefone
+   - Email
+   - Categoria (configurável)
+
+### 🔌 **Configuração do QuePasa**
+
+Para usar o QuePasa como provedor WhatsApp:
+
+1. **Configure o QuePasa** nas configurações:
+   - Host: `https://seu-quepasa.com` ou `http://ip:31000`
+   - Token: Token de autenticação do QuePasa
+
+2. **Crie uma sessão**:
+   - Na página de Conexões WhatsApp
+   - Selecione "QuePasa" como provedor
+   - O token será gerado automaticamente
+   - Escaneie o QR Code com o WhatsApp
+
+3. **Recursos suportados**:
+   - Envio de mensagens de texto
+   - Envio de imagens com legenda
+   - Envio de vídeos com legenda
+   - Envio de documentos
+   - Status da conexão em tempo real
 
 ### 🎲 **Randomização de Conteúdo**
 
@@ -536,6 +601,8 @@ Este projeto está licenciado sob a **GNU Affero General Public License v3.0 (AG
 
 - **[WAHA](https://waha.devlike.pro/)** - API WhatsApp Web
 - **[Evolution API](https://evolution-api.com/)** - API alternativa para WhatsApp
+- **[QuePasa](https://github.com/nocodeleaks/quepasa)** - API WhatsApp multi-dispositivo
+- **[Chatwoot](https://www.chatwoot.com/)** - Plataforma de atendimento ao cliente
 - **[Prisma](https://prisma.io/)** - ORM TypeScript
 - **[Tailwind CSS](https://tailwindcss.com/)** - Framework CSS
 - **[React](https://reactjs.org/)** - Biblioteca JavaScript
@@ -568,6 +635,8 @@ Este projeto está licenciado sob a **GNU Affero General Public License v3.0 (AG
 ### 📚 **Recursos Úteis**
 - 📖 [Documentação WAHA](https://waha.devlike.pro/docs/)
 - 📖 [Documentação Evolution API](https://doc.evolution-api.com/)
+- 📖 [Documentação QuePasa](https://github.com/nocodeleaks/quepasa)
+- 📖 [Documentação Chatwoot API](https://www.chatwoot.com/developers/api/)
 - 📖 [Documentação Prisma](https://www.prisma.io/docs/)
 - 📖 [Documentação React](https://reactjs.org/docs/)
 - 📖 [Documentação Docker Swarm](https://docs.docker.com/engine/swarm/)
