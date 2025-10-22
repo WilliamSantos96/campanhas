@@ -401,17 +401,17 @@ export function SettingsPage() {
               </div>
               <div>
                 <label htmlFor="zeusPort" className="block text-sm font-medium text-gray-700 mb-1">Porta *</label>
-                <input id="zeusPort" type="number" {...registerZeus('port')} placeholder="5432" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input id="zeusPort" type="number" {...registerZeus('port')} placeholder="3050" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 {zeusErrors.port && <p className="text-red-500 text-sm mt-1">{zeusErrors.port.message}</p>}
               </div>
               <div>
                 <label htmlFor="zeusDatabase" className="block text-sm font-medium text-gray-700 mb-1">Banco de Dados *</label>
-                <input id="zeusDatabase" type="text" {...registerZeus('databaseName')} placeholder="Ex.: base_empresa" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input id="zeusDatabase" type="text" {...registerZeus('databaseName')} placeholder="C:\Zeus\DB.FDB" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 {zeusErrors.databaseName && <p className="text-red-500 text-sm mt-1">{zeusErrors.databaseName.message}</p>}
               </div>
               <div>
                 <label htmlFor="zeusUser" className="block text-sm font-medium text-gray-700 mb-1">Usuário *</label>
-                <input id="zeusUser" type="text" {...registerZeus('username')} placeholder="Usuário do Sistema" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input id="zeusUser" type="text" {...registerZeus('username')} placeholder="SYSDBA" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 {zeusErrors.username && <p className="text-red-500 text-sm mt-1">{zeusErrors.username.message}</p>}
               </div>
               <div>
