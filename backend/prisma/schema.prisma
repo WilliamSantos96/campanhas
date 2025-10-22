@@ -1,6 +1,5 @@
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -8,39 +7,52 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============================================================================
-// MULTI-TENANT MODELS
-// ============================================================================
+// Global settings for the entire application (singleton)
+model GlobalSettings {
+  id              String    @id @default(cuid())
+  singleton       Boolean   @unique @default(true)
+  wahaHost        String?   @map("waha_host")
+  wahaApiKey      String?   @map("waha_api_key")
+  evolutionHost   String?   @map("evolution_host")
+  evolutionApiKey String?   @map("evolution_api_key")
+  companyName     String?   @map("company_name")
+  logoUrl         String?   @map("logo_url")
+  faviconUrl      String?   @map("favicon_url")
+  pageTitle       String?   @map("page_title")
+  iconUrl         String?   @map("icon_url")
+  primaryColor    String?   @map("primary_color")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
+  @@map("global_settings")
+}
+
+// Tenant (empresa)
 model Tenant {
-  id           String   @id @default(uuid())
-  slug         String   @unique // URL-friendly identifier
-  name         String
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  // Relations
+  id               String             @id @default(cuid())
+  slug             String             @unique
+  name             String
+  active           Boolean            @default(true)
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
   users            User[]
-  userTenants      UserTenant[] // Relacionamento muitos-para-muitos
   contacts         Contact[]
-  categories       Category[]
   campaigns        Campaign[]
-  campaignMessages CampaignMessage[]
   whatsappSessions WhatsAppSession[]
+  categories       Category[]
   quotas           TenantQuota?
   settings         TenantSettings?
   alerts           Alert[]
+  userTenants      UserTenant[]
   messageTemplates MessageTemplate[]
   automationFlows  AutomationFlow[]
-  integrations     Integration[]
-  auditLogs        AuditLog[]
+  credentialsZeus  CredentialsZeus?
 
   @@map("tenants")
 }
 
 model TenantQuota {
-  id             String   @id @default(uuid())
+  id             String   @id @default(cuid())
   tenantId       String   @unique @map("tenant_id")
   maxUsers       Int      @default(10) @map("max_users")
   maxContacts    Int      @default(1000) @map("max_contacts")
@@ -48,113 +60,147 @@ model TenantQuota {
   maxConnections Int      @default(5) @map("max_connections")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("tenant_quotas")
 }
 
 model TenantSettings {
-  id            String   @id @default(uuid())
-  tenantId      String   @unique @map("tenant_id")
-  openaiApiKey  String?  @map("openai_api_key")
-  groqApiKey    String?  @map("groq_api_key")
-  customBranding Json?   @map("custom_branding") // Logo, colors, etc
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  tenantId       String   @unique @map("tenant_id")
+  openaiApiKey   String?  @map("openai_api_key")
+  groqApiKey     String?  @map("groq_api_key")
+  customBranding Json?    @map("custom_branding")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("tenant_settings")
 }
 
-// Relacionamento muitos-para-muitos entre User e Tenant
+model User {
+  id                      String                @id @default(cuid())
+  nome                    String
+  email                   String                @unique
+  senha                   String
+  role                    String                @default("USER") // SUPERADMIN, ADMIN, USER
+  ativo                   Boolean               @default(true)
+  tenantId                String?               @map("tenant_id")
+  ultimoLogin             DateTime?             @map("ultimo_login")
+  criadoEm                DateTime              @default(now()) @map("criado_em")
+  atualizadoEm            DateTime              @updatedAt @map("atualizado_em")
+  tenant                  Tenant?               @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  tenants                 UserTenant[]
+  alerts                  Alert[]
+  notifications           Notification[]
+  createdMessageTemplates MessageTemplate[]     @relation("CreatedBy")
+  createdAutomationFlows  AutomationFlow[]      @relation("CreatedBy")
+
+  @@map("users")
+}
+
 model UserTenant {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   userId    String   @map("user_id")
   tenantId  String   @map("tenant_id")
-  role      String   @default("USER") // USER, ADMIN (no contexto deste tenant)
+  role      String   @default("USER")
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Relations
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, tenantId]) // Um usuário não pode ter duplicatas no mesmo tenant
-  @@index([userId])
-  @@index([tenantId])
+  @@unique([userId, tenantId])
   @@map("user_tenants")
 }
 
-model GlobalSettings {
-  id              String   @id @default(uuid())
-  singleton       Boolean  @default(true) @unique // Ensures only one record
-  wahaHost        String   @default("") @map("waha_host")
-  wahaApiKey      String   @default("") @map("waha_api_key")
-  evolutionHost   String   @default("") @map("evolution_host")
-  evolutionApiKey String   @default("") @map("evolution_api_key")
-  logoUrl         String?  @map("logo_url")
-  faviconUrl      String?  @map("favicon_url")
-  iconUrl         String?  @map("icon_url")
-  companyName     String?  @map("company_name")
-  pageTitle       String?  @map("page_title")
-  primaryColor    String?  @map("primary_color")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  @@map("global_settings")
-}
-
-// ============================================================================
-// UPDATED EXISTING MODELS WITH TENANT SUPPORT
-// ============================================================================
-
 model Contact {
-  id           String   @id @default(uuid())
+  id           String            @id @default(cuid())
   nome         String
   telefone     String
   email        String?
-  tags         String[]
   observacoes  String?
-  categoriaId  String?  @map("categoria_id")
-  tenantId     String?  @map("tenant_id") // Optional for backward compatibility
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
+  tags         String[]
+  tenantId     String?           @map("tenant_id")
+  categoriaId  String?           @map("categoria_id")
+  criadoEm     DateTime          @default(now()) @map("criado_em")
+  atualizadoEm DateTime          @updatedAt @map("atualizado_em")
+  tenant       Tenant?           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  categoria    Category?         @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
+  messages     CampaignMessage[]
 
-  // Relations
-  categoria Category? @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
-  tenant    Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@index([categoriaId])
   @@map("contacts")
 }
 
 model Category {
-  id          String   @id @default(uuid())
-  nome        String
-  cor         String
-  descricao   String?
-  tenantId    String?  @map("tenant_id") // Optional for backward compatibility
-  criadoEm    DateTime @default(now()) @map("criado_em")
-  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+  id           String    @id @default(cuid())
+  nome         String
+  cor          String
+  descricao    String?
+  tenantId     String?   @map("tenant_id")
+  criadoEm     DateTime  @default(now()) @map("criado_em")
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em")
+  tenant       Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contacts     Contact[]
 
-  // Relations
-  contacts    Contact[]
-  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
   @@map("categories")
 }
 
+model Campaign {
+  id               String            @id @default(cuid())
+  nome             String
+  targetTags       String            @map("target_tags")
+  sessionName      String?           @map("session_name")
+  sessionNames     String?           @map("session_names")
+  messageType      String            @map("message_type")
+  messageContent   String            @map("message_content")
+  randomDelay      Int               @default(0) @map("random_delay")
+  startImmediately Boolean           @default(true) @map("start_immediately")
+  scheduledFor     DateTime?         @map("scheduled_for")
+  status           String            @default("PENDING") // PENDING, RUNNING, COMPLETED, PAUSED, FAILED
+  totalContacts    Int               @default(0) @map("total_contacts")
+  sentCount        Int               @default(0) @map("sent_count")
+  failedCount      Int               @default(0) @map("failed_count")
+  startedAt        DateTime?         @map("started_at")
+  completedAt      DateTime?         @map("completed_at")
+  createdBy        String?           @map("created_by")
+  createdByName    String?           @map("created_by_name")
+  tenantId         String?           @map("tenant_id")
+  criadoEm         DateTime          @default(now()) @map("criado_em")
+  atualizadoEm     DateTime          @updatedAt @map("atualizado_em")
+  tenant           Tenant?           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  session          WhatsAppSession?  @relation(fields: [sessionName], references: [name], onDelete: SetNull)
+  messages         CampaignMessage[]
+
+  @@map("campaigns")
+}
+
+model CampaignMessage {
+  id                String    @id @default(cuid())
+  campaignId        String    @map("campaign_id")
+  contactId         String?   @map("contact_id")
+  contactPhone      String    @map("contact_phone")
+  contactName       String    @map("contact_name")
+  status            String    @default("PENDING") // PENDING, PROCESSING, SENT, FAILED
+  sentAt            DateTime? @map("sent_at")
+  deliveredAt       DateTime? @map("delivered_at")
+  readAt            DateTime? @map("read_at")
+  errorMessage      String?   @map("error_message")
+  messageId         String?   @map("message_id")
+  sessionName       String?   @map("session_name")
+  selectedVariation String?   @map("selected_variation")
+  tenantId          String?   @map("tenant_id")
+  criadoEm          DateTime  @default(now()) @map("criado_em")
+  campaign          Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact           Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@map("campaign_messages")
+}
+
 model WhatsAppSession {
-  id             String     @id @default(uuid())
-  name           String     @unique // Nome real usado na API (ex: vendas_c52982e8)
-  displayName    String?    @map("display_name") // Nome exibido ao usuário (ex: vendas)
+  id             String     @id @default(cuid())
+  name           String     @unique
+  displayName    String?    @map("display_name")
   status         String
+  provider       String     @default("WAHA") // WAHA, EVOLUTION
   config         String?
   meId           String?    @map("me_id")
   mePushName     String?    @map("me_push_name")
@@ -163,385 +209,135 @@ model WhatsAppSession {
   qr             String?
   qrExpiresAt    DateTime?  @map("qr_expires_at")
   assignedWorker String?    @map("assigned_worker")
-  tenantId       String?    @map("tenant_id") // Optional for backward compatibility
+  tenantId       String?    @map("tenant_id")
   criadoEm       DateTime   @default(now()) @map("criado_em")
   atualizadoEm   DateTime   @updatedAt @map("atualizado_em")
-  provider       String     @default("WAHA")
+  tenant         Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   campaigns      Campaign[]
 
-  // Relations
-  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
   @@map("whatsapp_sessions")
 }
 
-model Campaign {
-  id               String            @id @default(uuid())
-  nome             String
-  targetTags       String
-  sessionName      String?           @map("session_name")
-  messageType      String            @map("message_type")
-  messageContent   String            @map("message_content")
-  randomDelay      Int               @map("random_delay")
-  startImmediately Boolean           @map("start_immediately")
-  scheduledFor     DateTime?         @map("scheduled_for")
-  status           String            @default("PENDING")
-  totalContacts    Int               @default(0) @map("total_contacts")
-  sentCount        Int               @default(0) @map("sent_count")
-  failedCount      Int               @default(0) @map("failed_count")
-  startedAt        DateTime?         @map("started_at")
-  completedAt      DateTime?         @map("completed_at")
-  tenantId         String?           @map("tenant_id") // Optional for backward compatibility
-  criadoEm         DateTime          @default(now()) @map("criado_em")
-  atualizadoEm     DateTime          @updatedAt @map("atualizado_em")
-  sessionNames     String?           @map("session_names")
-  createdBy        String?           @map("created_by")
-  createdByName    String?           @map("created_by_name")
-  messages         CampaignMessage[]
-  session          WhatsAppSession?  @relation(fields: [sessionName], references: [name])
-
-  // Relations
-  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@map("campaigns")
-}
-
-model CampaignMessage {
-  id                String    @id @default(uuid())
-  campaignId        String    @map("campaign_id")
-  contactId         String    @map("contact_id")
-  contactPhone      String    @map("contact_phone")
-  contactName       String    @map("contact_name")
-  status            String    @default("PENDING")
-  sentAt            DateTime? @map("sent_at")
-  deliveredAt       DateTime? @map("delivered_at")
-  readAt            DateTime? @map("read_at")
-  errorMessage      String?   @map("error_message")
-  messageId         String?   @map("message_id")
-  selectedVariation String?   @map("selected_variation")
-  tenantId          String?   @map("tenant_id") // Optional for backward compatibility
-  criadoEm          DateTime  @default(now()) @map("criado_em")
-  atualizadoEm      DateTime  @updatedAt @map("atualizado_em")
-  sessionName       String?   @map("session_name")
-  campaign          Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-
-  // Relations
-  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@map("campaign_messages")
-}
-
-model User {
-  id           String    @id @default(uuid())
-  nome         String
-  email        String    @unique
-  senha        String
-  role         String    @default("USER") // USER, ADMIN, SUPERADMIN
-  ativo        Boolean   @default(true)
-  tenantId     String?   @map("tenant_id") // NULL for SUPERADMIN
-  ultimoLogin  DateTime? @map("ultimo_login")
-  criadoEm     DateTime  @default(now()) @map("criado_em")
-  atualizadoEm DateTime  @updatedAt @map("atualizado_em")
-
-  // Relations
-  tenant           Tenant?           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  tenants          UserTenant[]      // Relacionamento muitos-para-muitos com tenants
-  alerts           Alert[]
-  notifications    Notification[]
-  userNotifications UserNotification[]
-  createdTemplates MessageTemplate[] @relation("TemplateCreator")
-  createdFlows     AutomationFlow[]  @relation("FlowCreator")
-  createdIntegrations Integration[]   @relation("IntegrationCreator")
-  auditLogs        AuditLog[]
-
-  @@index([tenantId])
-  @@map("users")
-}
-
-// ============================================================================
-// ALERTS AND NOTIFICATIONS SYSTEM
-// ============================================================================
-
-model Alert {
-  id          String      @id @default(uuid())
-  type        AlertType
-  severity    AlertSeverity
-  title       String
-  message     String
-  tenantId    String?     @map("tenant_id") // NULL for system-wide alerts
-  userId      String?     @map("user_id")   // NULL for tenant-wide alerts
-  metadata    Json?       // Additional data (quota details, error info, etc)
-  resolved    Boolean     @default(false)
-  resolvedAt  DateTime?   @map("resolved_at")
-  resolvedBy  String?     @map("resolved_by")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
-
-  // Relations
-  tenant      Tenant?     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user        User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  notifications Notification[]
-
-  @@index([tenantId])
-  @@index([type, severity])
-  @@index([resolved, createdAt])
-  @@map("alerts")
-}
-
-model Notification {
-  id        String            @id @default(uuid())
-  alertId   String            @map("alert_id")
-  userId    String            @map("user_id")
-  method    NotificationMethod
-  sent      Boolean           @default(false)
-  sentAt    DateTime?         @map("sent_at")
-  read      Boolean           @default(false)
-  readAt    DateTime?         @map("read_at")
-  createdAt DateTime          @default(now()) @map("created_at")
-  updatedAt DateTime          @updatedAt @map("updated_at")
-
-  // Relations
-  alert     Alert             @relation(fields: [alertId], references: [id], onDelete: Cascade)
-  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, read])
-  @@index([alertId])
-  @@map("notifications")
-}
-
 enum AlertType {
-  QUOTA_WARNING      // Quota usage above 80%
-  QUOTA_EXCEEDED     // Quota exceeded
-  SYSTEM_ERROR       // System-level errors
-  TENANT_INACTIVE    // Tenant marked as inactive
-  SESSION_FAILED     // WhatsApp session failures
-  CAMPAIGN_FAILED    // Campaign execution failures
-  DATABASE_ERROR     // Database connectivity issues
-  API_ERROR          // External API failures
-  BACKUP_FAILED      // Backup process failures
-  SECURITY_ALERT     // Security-related alerts
+  SYSTEM_ERROR
+  QUOTA_WARNING
+  QUOTA_EXCEEDED
+  SESSION_FAILED
+  CAMPAIGN_FAILED
+  DATABASE_ERROR
+  INTEGRATION_ERROR
 }
 
 enum AlertSeverity {
-  LOW      // Informational
-  MEDIUM   // Warning - attention needed
-  HIGH     // Error - immediate action required
-  CRITICAL // Critical - system impact
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model Alert {
+  id            String         @id @default(cuid())
+  type          AlertType
+  severity      AlertSeverity
+  title         String
+  message       String
+  metadata      Json?
+  resolved      Boolean        @default(false)
+  resolvedAt    DateTime?      @map("resolved_at")
+  resolvedBy    String?        @map("resolved_by")
+  tenantId      String?        @map("tenant_id")
+  userId        String?        @map("user_id")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user          User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  notifications Notification[]
+
+  @@map("alerts")
 }
 
 enum NotificationMethod {
-  IN_APP     // In-application notifications
-  EMAIL      // Email notifications (future)
-  WEBHOOK    // Webhook notifications (future)
+  IN_APP
+  EMAIL
+  WEBHOOK
 }
 
-// ============================================================================
-// USER NOTIFICATIONS FOR REAL-TIME SYSTEM
-// ============================================================================
+model Notification {
+  id        String             @id @default(cuid())
+  alertId   String             @map("alert_id")
+  userId    String             @map("user_id")
+  method    NotificationMethod
+  read      Boolean            @default(false)
+  readAt    DateTime?          @map("read_at")
+  createdAt DateTime           @default(now()) @map("created_at")
+  alert     Alert              @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-model UserNotification {
-  id        String                   @id @default(uuid())
-  userId    String                   @map("user_id")
-  title     String
-  message   String
-  type      UserNotificationType
-  data      Json?                    // Additional context data
-  read      Boolean                  @default(false)
-  readAt    DateTime?                @map("read_at")
-  createdAt DateTime                 @default(now()) @map("created_at")
-  updatedAt DateTime                 @updatedAt @map("updated_at")
-
-  // Relations
-  user      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, read])
-  @@index([createdAt])
-  @@map("user_notifications")
+  @@map("notifications")
 }
-
-enum UserNotificationType {
-  INFO      // Informational notifications
-  SUCCESS   // Success notifications
-  WARNING   // Warning notifications
-  ERROR     // Error notifications
-  CAMPAIGN  // Campaign-related notifications
-  BACKUP    // Backup-related notifications
-  SYSTEM    // System-related notifications
-}
-
-// ============================================================================
-// MESSAGE TEMPLATES SYSTEM
-// ============================================================================
 
 model MessageTemplate {
-  id          String      @id @default(uuid())
+  id          String   @id @default(cuid())
   name        String
-  tenantId    String      @map("tenant_id")
+  tenantId    String   @map("tenant_id")
   category    String
-  messageType MessageType @map("message_type")
-  content     String      @db.Text
-  variables   String[]    // List of variables in template like ['nome', 'empresa']
-  mediaUrl    String?     @map("media_url")
-  active      Boolean     @default(true)
+  messageType String   @map("message_type") // TEXT, IMAGE, DOCUMENT, VIDEO, AUDIO
+  content     String
+  variables   String[]
+  mediaUrl    String?  @map("media_url")
+  active      Boolean  @default(true)
   tags        String[]
-  description String?     @db.Text
-  createdBy   String      @map("created_by")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  description String?
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator     User     @relation("CreatedBy", fields: [createdBy], references: [id])
 
-  // Relations
-  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  creator     User        @relation("TemplateCreator", fields: [createdBy], references: [id])
-
-  @@index([tenantId])
-  @@index([category])
-  @@index([messageType])
-  @@index([active])
   @@map("message_templates")
 }
 
-enum MessageType {
-  TEXT      // Plain text messages
-  IMAGE     // Image messages
-  DOCUMENT  // Document messages
-  VIDEO     // Video messages
-  AUDIO     // Audio messages
-}
-
-// ============================================================================
-// AUTOMATION AND WORKFLOW SYSTEM
-// ============================================================================
-
 model AutomationFlow {
-  id          String    @id @default(uuid())
+  id          String                @id @default(cuid())
   name        String
-  description String?   @db.Text
-  tenantId    String    @map("tenant_id")
-  active      Boolean   @default(true)
-  trigger     Json      // Trigger configuration
-  conditions  Json?     // Conditions configuration
-  actions     Json      // Actions configuration
-  createdBy   String    @map("created_by")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  description String?
+  tenantId    String                @map("tenant_id")
+  active      Boolean               @default(true)
+  trigger     Json
+  conditions  Json?
+  actions     Json
+  createdBy   String                @map("created_by")
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+  tenant      Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator     User                  @relation("CreatedBy", fields: [createdBy], references: [id])
+  executions  AutomationExecution[]
 
-  // Relations
-  tenant     Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  creator    User                 @relation("FlowCreator", fields: [createdBy], references: [id])
-  executions AutomationExecution[]
-
-  @@index([tenantId])
-  @@index([active])
   @@map("automation_flows")
 }
 
 model AutomationExecution {
-  id         String    @id @default(uuid())
-  flowId     String    @map("flow_id")
-  status     String    // SUCCESS, FAILED, RUNNING
-  executedAt DateTime  @map("executed_at")
-  context    Json?     // Execution context data
-  error      String?   @db.Text
-  duration   Int?      // Execution duration in milliseconds
-
-  // Relations
+  id         String   @id @default(cuid())
+  flowId     String   @map("flow_id")
+  status     String // SUCCESS, FAILED, RUNNING
+  executedAt DateTime @default(now()) @map("executed_at")
+  context    Json?
+  error      String?
   flow       AutomationFlow @relation(fields: [flowId], references: [id], onDelete: Cascade)
 
-  @@index([flowId])
-  @@index([executedAt])
-  @@index([status])
   @@map("automation_executions")
 }
 
-// ============================================================================
-// INTEGRATIONS SYSTEM
-// ============================================================================
+model CredentialsZeus {
+  id           String   @id @default(cuid())
+  tenantId     String   @unique @map("tenant_id")
+  host         String
+  port         Int
+  databaseName String   @map("database_name")
+  username     String
+  password     String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-model Integration {
-  id            String           @id @default(uuid())
-  name          String
-  type          IntegrationType
-  tenantId      String           @map("tenant_id")
-  active        Boolean          @default(true)
-  config        Json             // Integration-specific configuration
-  credentials   Json?            // Encrypted credentials
-  webhookUrl    String?          @map("webhook_url")
-  lastSyncAt    DateTime?        @map("last_sync_at")
-  lastError     String?          @map("last_error") @db.Text
-  createdBy     String           @map("created_by")
-  createdAt     DateTime         @default(now()) @map("created_at")
-  updatedAt     DateTime         @updatedAt @map("updated_at")
-
-  // Relations
-  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  creator       User             @relation("IntegrationCreator", fields: [createdBy], references: [id])
-  syncLogs      IntegrationSync[]
-
-  @@index([tenantId])
-  @@index([type])
-  @@index([active])
-  @@map("integrations")
-}
-
-model IntegrationSync {
-  id            String      @id @default(uuid())
-  integrationId String      @map("integration_id")
-  type          String      // sync_contacts, sync_campaigns, webhook_received
-  status        String      // SUCCESS, FAILED, RUNNING
-  recordsCount  Int?        @map("records_count")
-  errorMessage  String?     @map("error_message") @db.Text
-  metadata      Json?       // Sync-specific metadata
-  startedAt     DateTime    @map("started_at")
-  completedAt   DateTime?   @map("completed_at")
-
-  // Relations
-  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
-
-  @@index([integrationId])
-  @@index([startedAt])
-  @@index([status])
-  @@map("integration_syncs")
-}
-
-enum IntegrationType {
-  WEBHOOK      // Generic webhook integration
-  ZAPIER       // Zapier integration
-  CRM          // CRM systems (Salesforce, HubSpot, etc)
-  ERP          // ERP systems (SAP, Oracle, etc)
-  ECOMMERCE    // E-commerce platforms (Shopify, WooCommerce, etc)
-  EMAIL        // Email marketing platforms (Mailchimp, Constant Contact)
-  CALENDAR     // Calendar systems (Google Calendar, Outlook)
-  STORAGE      // Cloud storage (Google Drive, Dropbox)
-  ANALYTICS    // Analytics platforms (Google Analytics, Mixpanel)
-  CUSTOM       // Custom API integrations
-}
-
-// Settings model is now split into GlobalSettings and TenantSettings
-// This will be handled by a migration
-
-model AuditLog {
-  id          String   @id @default(uuid())
-  action      String   // AuditAction enum value
-  severity    String   // AuditSeverity enum value
-  tenantId    String
-  userId      String?
-  entityType  String?  // Type of entity being audited (User, Contact, Campaign, etc.)
-  entityId    String?  // ID of the entity being audited
-  details     Json     // Detailed information about the action
-  ipAddress   String?
-  userAgent   String?
-  metadata    Json?    // Additional metadata
-  timestamp   DateTime @default(now())
-
-  user        User?    @relation(fields: [userId], references: [id])
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId, timestamp])
-  @@index([userId, timestamp])
-  @@index([action, timestamp])
-  @@index([entityType, entityId])
-  @@map("audit_logs")
+  @@map("credentials_zeus")
 }
