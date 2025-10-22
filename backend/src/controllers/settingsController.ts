@@ -104,9 +104,9 @@ export const getSettings = async (req: AuthenticatedRequest, res: Response) => {
 
     // Para configurações AI, usar tenantId do usuário, ou parâmetro tenantId para SUPERADMIN
     let effectiveTenantId = req.tenantId;
-    if (req.user?.role === 'SUPERADMIN') {
-      // SUPERADMIN pode gerenciar configurações de qualquer tenant
-      effectiveTenantId = (req.query.tenantId as string) || 'aa135abc-56bf-400a-b980-cc2a38f0a2b4';
+    if (req.user?.role === 'SUPERADMIN' && req.query.tenantId) {
+      // SUPERADMIN pode gerenciar configurações de qualquer tenant via query param
+      effectiveTenantId = req.query.tenantId as string;
     }
 
     // Buscar configurações do tenant (APIs de IA)
@@ -173,7 +173,9 @@ export const updateSettings = async (req: AuthenticatedRequest, res: Response) =
     let effectiveTenantId = req.tenantId;
     if (req.user?.role === 'SUPERADMIN') {
       // SUPERADMIN pode gerenciar configurações de qualquer tenant
-      effectiveTenantId = tenantId || 'aa135abc-56bf-400a-b980-cc2a38f0a2b4';
+      if (tenantId) {
+        effectiveTenantId = tenantId;
+      }
     }
 
     // Atualizar configurações do tenant (APIs de IA)

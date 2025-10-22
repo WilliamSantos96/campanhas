@@ -288,7 +288,7 @@ export function SettingsPage() {
                     <img src="/assets/logos/groq.png" alt="Groq" className="w-10 h-10" />
                     <div>
                       <h3 className="font-medium text-gray-900">Groq</h3>
-                      <p className="text-sm text-gray-500">LLaMA, Mixtral (ultra-rápido)</p>
+                      <p className="text-sm text-gray-500">LLaMA, Mixtral</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -306,29 +306,29 @@ export function SettingsPage() {
 
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold mb-6 text-gray-900">
-              📦 Integrações de ERP
+              📦 Integração com Zeus Sistemas
             </h2>
             <p className="text-gray-600 mb-6">
-              Conecte seu sistema de gestão para sincronizar dados.
+              Conecte seu sistema de gestão para sincronizar contatos.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:grid-cols-2 gap-4">
               {/* Sistema Zeus */}
               <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
                     </div>
                     <div>
-                      <h3 className="font-medium text-gray-900">Sistema Zeus</h3>
-                      <p className="text-sm text-gray-500">ERP de Gestão</p>
+                      <h3 className="font-medium text-gray-900">Zeus Gestão</h3>
+                      <p className="text-sm text-gray-500">Configuração com Banco de Dados</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${zeusSettings ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                       {zeusSettings ? 'Configurado' : 'Não configurado'}
                     </span>
-                    <button onClick={() => setActiveModal('zeus')} className="px-3 py-1 bg-yellow-500 text-white text-sm rounded hover:bg-yellow-600">
+                    <button onClick={() => setActiveModal('zeus')} className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600">
                       Configurar
                     </button>
                   </div>
@@ -396,33 +396,33 @@ export function SettingsPage() {
             <form onSubmit={handleZeusSubmit(onZeusSubmit)} className="space-y-4">
               <div>
                 <label htmlFor="zeusHost" className="block text-sm font-medium text-gray-700 mb-1">IP / Host *</label>
-                <input id="zeusHost" type="text" {...registerZeus('host')} placeholder="192.168.0.1" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500" />
+                <input id="zeusHost" type="text" {...registerZeus('host')} placeholder="192.168.0.1" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 {zeusErrors.host && <p className="text-red-500 text-sm mt-1">{zeusErrors.host.message}</p>}
               </div>
               <div>
                 <label htmlFor="zeusPort" className="block text-sm font-medium text-gray-700 mb-1">Porta *</label>
-                <input id="zeusPort" type="number" {...registerZeus('port')} placeholder="3050" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500" />
+                <input id="zeusPort" type="number" {...registerZeus('port')} placeholder="3050" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 {zeusErrors.port && <p className="text-red-500 text-sm mt-1">{zeusErrors.port.message}</p>}
               </div>
               <div>
                 <label htmlFor="zeusDatabase" className="block text-sm font-medium text-gray-700 mb-1">Banco de Dados *</label>
-                <input id="zeusDatabase" type="text" {...registerZeus('databaseName')} placeholder="C:\Zeus\DB.FDB" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500" />
+                <input id="zeusDatabase" type="text" {...registerZeus('databaseName')} placeholder="C:\Zeus\DB.FDB" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 {zeusErrors.databaseName && <p className="text-red-500 text-sm mt-1">{zeusErrors.databaseName.message}</p>}
               </div>
               <div>
                 <label htmlFor="zeusUser" className="block text-sm font-medium text-gray-700 mb-1">Usuário *</label>
-                <input id="zeusUser" type="text" {...registerZeus('username')} placeholder="SYSDBA" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500" />
+                <input id="zeusUser" type="text" {...registerZeus('username')} placeholder="SYSDBA" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 {zeusErrors.username && <p className="text-red-500 text-sm mt-1">{zeusErrors.username.message}</p>}
               </div>
               <div>
                 <label htmlFor="zeusPassword" className="block text-sm font-medium text-gray-700 mb-1">Senha {zeusSettings?.hasPassword ? '(deixe em branco para manter)' : '*'}</label>
-                <input id="zeusPassword" type="password" {...registerZeus('password')} placeholder="••••••••" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500" />
+                <input id="zeusPassword" type="password" {...registerZeus('password')} placeholder="••••••••" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 {zeusErrors.password && <p className="text-red-500 text-sm mt-1">{zeusErrors.password.message}</p>}
               </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setActiveModal(null)} className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">Cancelar</button>
                 {zeusSettings && <button type="button" onClick={() => removeIntegration('zeus')} disabled={isZeusSubmitting} className="flex-1 px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50">Remover</button>}
-                <button type="submit" disabled={isZeusSubmitting} className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 disabled:opacity-50">{isZeusSubmitting ? 'Salvando...' : 'Salvar'}</button>
+                <button type="submit" disabled={isZeusSubmitting} className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50">{isZeusSubmitting ? 'Salvando...' : 'Salvar'}</button>
               </div>
             </form>
           </div>
