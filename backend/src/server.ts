@@ -24,6 +24,7 @@ import notificationsRoutes from './routes/notifications';
 import messageTemplatesRoutes from './routes/messageTemplates';
 import reportsRoutes from './routes/reports';
 import automationRoutes from './routes/automation';
+import zeusRoutes from './routes/zeus'; // Importando as novas rotas
 // import integrationsRoutes from './routes/integrations';
 // import cacheRoutes from './routes/cache';
 import { authMiddleware } from './middleware/auth';
@@ -152,6 +153,7 @@ app.use('/api/notifications', authMiddleware, notificationsRoutes); // User noti
 app.use('/api/templates', authMiddleware, messageTemplatesRoutes); // Message templates system
 app.use('/api/reports', authMiddleware, reportsRoutes); // Advanced reporting system
 app.use('/api/automation', authMiddleware, automationRoutes); // Automation and workflow system
+app.use('/api/zeus', authMiddleware, zeusRoutes); // Rota para integração Zeus
 // app.use('/api/integrations', integrationsRoutes); // External API integrations system
 // app.use('/api/cache', cacheRoutes); // Cache management and monitoring
 app.use('/api/media', authMiddleware, mediaRoutes); // Upload de arquivos de mídia
