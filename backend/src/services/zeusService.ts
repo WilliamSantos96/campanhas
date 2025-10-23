@@ -42,6 +42,11 @@ export class ZeusService {
     // Apenas atualiza a senha se uma nova for fornecida
     if (data.password && data.password.length > 0) {
       upsertData.password = data.password;
+    } else {
+      // Para updates, não incluir o campo password se não foi fornecido
+      if (data.password === undefined) {
+        delete upsertData.password;
+      }
     }
 
     return prisma.credentialsZeus.upsert({

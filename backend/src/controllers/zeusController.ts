@@ -6,10 +6,19 @@ import { z } from 'zod';
 // Schema de validação para os dados de entrada
 const credentialsSchema = z.object({
   host: z.string().min(1, 'Host é obrigatório'),
-  port: z.coerce.number().int().positive('Porta deve ser um número positivo'),
+  port: z.union([
+    z.number().int().positive('Porta deve ser um número positivo'),
+    z.string().min(1, 'Porta é obrigatória').transform((val) => {
+      const num = parseInt(val, 10);
+      if (isNaN(num) || num <= 0) {
+        throw new Error('Porta deve ser um número positivo');
+      }
+      return num;
+    })
+  ]),
   databaseName: z.string().min(1, 'Nome do banco é obrigatório'),
   username: z.string().min(1, 'Usuário é obrigatório'),
-  password: z.string().optional(), // Senha é opcional, pode não ser alterada
+  password: z.string().optional().or(z.literal('')), // Senha é opcional, pode não ser alterada
 });
 
 export class ZeusController {
