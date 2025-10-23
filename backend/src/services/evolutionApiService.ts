@@ -98,18 +98,29 @@ export class EvolutionApiService {
   }
 
   async getQRCode(instanceName: string): Promise<string> {
-    const response = await this.makeRequest(`/instance/connect/${instanceName}`);
-    const data = await response.json() as { base64?: string };
+    try {
+      const response = await this.makeRequest(`/instance/connect/${instanceName}`);
+      const data = await response.json() as { base64?: string; code?: string; pairingCode?: string };
 
-    if (data.base64) {
-      // Verificar se o base64 já tem o prefixo data:image
-      if (data.base64.startsWith('data:image/')) {
-        return data.base64;
+      // Evolution API pode retornar base64, code ou pairingCode
+      if (data.base64) {
+        // Verificar se o base64 já tem o prefixo data:image
+        if (data.base64.startsWith('data:image/')) {
+          return data.base64;
+        }
+        return `data:image/png;base64,${data.base64}`;
       }
-      return `data:image/png;base64,${data.base64}`;
-    }
 
-    throw new Error('QR Code não disponível');
+      if (data.code) {
+        // Se retornar apenas o código, converter para base64
+        return data.code;
+      }
+
+      throw new Error('QR Code não disponível');
+    } catch (error: any) {
+      console.error(`❌ Erro ao obter QR Code da Evolution API para ${instanceName}:`, error.message);
+      throw new Error(`QR Code não disponível: ${error.message}`);
+    }
   }
 
   async deleteInstance(instanceName: string): Promise<void> {
@@ -127,19 +138,28 @@ export class EvolutionApiService {
   async getInstanceStatus(instanceName: string): Promise<string> {
     try {
       const info = await this.getInstanceInfo(instanceName);
-      console.log(`🔍 Evolution getInstanceInfo para ${instanceName}:`, info);
+      console.log(`🔍 Evolution getInstanceInfo para ${instanceName}:`, JSON.stringify(info, null, 2));
 
       // Mapear status Evolution para status do sistema
       const statusMap: { [key: string]: string } = {
         'open': 'WORKING',
         'connecting': 'SCAN_QR_CODE',
         'close': 'STOPPED',
-        'qr': 'SCAN_QR_CODE'
+        'closed': 'STOPPED',
+        'qr': 'SCAN_QR_CODE',
+        'qrReadSuccess': 'WORKING',
+        'qrReadFail': 'FAILED'
       };
 
-      // Evolution API usa connectionStatus, não status
-      const evolutionStatus = (info as any).connectionStatus || info.status;
-      return statusMap[evolutionStatus] || 'STOPPED';
+      // Evolution API pode usar connectionStatus, state ou status
+      const rawData = info as any;
+      const evolutionStatus = rawData.connectionStatus || rawData.state || rawData.status || 'close';
+
+      console.log(`🔍 Status bruto Evolution para ${instanceName}: "${evolutionStatus}"`);
+      const mappedStatus = statusMap[evolutionStatus.toLowerCase()] || 'STOPPED';
+      console.log(`📊 Status mapeado para ${instanceName}: "${mappedStatus}"`);
+
+      return mappedStatus;
     } catch (error) {
       console.warn(`⚠️ Erro ao obter status Evolution para ${instanceName}:`, error);
       return 'STOPPED';

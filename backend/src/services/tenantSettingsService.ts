@@ -39,6 +39,9 @@ export class TenantSettingsService {
     openaiApiKey?: string | null;
     groqApiKey?: string | null;
     customBranding?: any;
+    chatwootUrl?: string | null;
+    chatwootAccountId?: string | null;
+    chatwootApiToken?: string | null;
   }) {
     try {
       const settings = await prisma.tenantSettings.upsert({
@@ -46,13 +49,19 @@ export class TenantSettingsService {
         update: {
           openaiApiKey: data.openaiApiKey !== undefined ? data.openaiApiKey : undefined,
           groqApiKey: data.groqApiKey !== undefined ? data.groqApiKey : undefined,
-          customBranding: data.customBranding !== undefined ? data.customBranding : undefined
+          customBranding: data.customBranding !== undefined ? data.customBranding : undefined,
+          chatwootUrl: data.chatwootUrl !== undefined ? data.chatwootUrl : undefined,
+          chatwootAccountId: data.chatwootAccountId !== undefined ? data.chatwootAccountId : undefined,
+          chatwootApiToken: data.chatwootApiToken !== undefined ? data.chatwootApiToken : undefined
         },
         create: {
           tenantId,
           openaiApiKey: data.openaiApiKey || null,
           groqApiKey: data.groqApiKey || null,
-          customBranding: data.customBranding || undefined
+          customBranding: data.customBranding || undefined,
+          chatwootUrl: data.chatwootUrl || null,
+          chatwootAccountId: data.chatwootAccountId || null,
+          chatwootApiToken: data.chatwootApiToken || null
         }
       });
 
